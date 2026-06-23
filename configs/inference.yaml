@@ -16,8 +16,9 @@ max_det: 300         # dense frames have up to 38 objects; headroom for TTA/ense
 tta: true            # Ultralytics augmented inference (multi-scale + flips)
 
 # --- submission formatting ---
-conf_scale: 100.0    # sample_submission.csv uses a 0-100 scale -> mirror it. Use 1.0 for 0-1.
-conf_decimals: 2     # decimals for the confidence value (sample shows 2, e.g. 65.38)
+conf_scale: 1.0      # grader format is confidence in [0,1] (its example row is `0 0.94 ...`).
+                     # mAP@0.5 is rank-invariant so the scale never changes the score.
+conf_decimals: 5     # 5 dp keeps ranking granular down to 1e-5 (default conf=0.001 needs it)
 box_decimals: 6      # decimals for the normalized box coordinates
 emit_empty: true     # every test image must appear, empty PredictionString if no detections
 

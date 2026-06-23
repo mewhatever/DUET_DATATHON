@@ -1,15 +1,19 @@
 """
 Write the competition submission CSV from a prediction cache.
 
-Format (matches data/test/sample_submission.csv EXACTLY):
+Format (matches the competition's stated grader format EXACTLY):
     image_id,PredictionString
-    <stem>.txt,<class conf cx cy w h  class conf cx cy w h ...>
-    <stem>.txt,                       <-- images with no detections still appear
+    <stem>,<class conf cx cy w h  class conf cx cy w h ...>
+    <stem>,                       <-- images with no detections still appear
 
 Gotchas handled here (each a silent score-killer otherwise)
-* image_id uses **.txt** (sample_submission uses .txt; images are .jpg).
-* confidence is emitted on the sample's **0-100** scale (configurable via conf_scale;
-  mAP is rank-invariant so the scale does not change the score, but we mirror the sample).
+* image_id is the **bare stem, NO extension** (not .jpg, not .txt). The grader's own
+  example row is `img_0001,...` -- a submission with `.jpg`/`.txt` ids is rejected with
+  "Solution and submission values for image_id do not match". sample_submission.csv shipped
+  with a different (truncated, .txt) convention, so we follow the grader spec, not the sample.
+* confidence is emitted in **[0, 1]** by default (conf_scale=1.0), matching the grader's
+  example `0 0.94 ...`. mAP@0.5 is rank-invariant so the scale never changes the score, but
+  [0,1] keeps us strictly inside the stated format. Override conf_scale in inference.yaml.
 * **every** test image appears (empty PredictionString if no detections). The id list
   comes from the test-images directory (327 imgs) because sample_submission.csv here is
   only a truncated 10-row example -- see collect_test_ids().
@@ -31,7 +35,7 @@ from typing import Dict
 
 import numpy as np
 
-from .utils import load_yaml, read_sample_ids, stem_of, to_txt_id
+from .utils import load_yaml, read_sample_ids, stem_of
 
 
 def _load_preds(path: str) -> Dict[str, np.ndarray]:
@@ -86,7 +90,7 @@ def write_submission(preds: Dict[str, np.ndarray], out_csv: str,
                      test_images_dir: str | None = None, sample_csv: str | None = None,
                      infer_cfg: dict | None = None) -> dict:
     infer_cfg = infer_cfg or {}
-    conf_scale = float(infer_cfg.get("conf_scale", 100.0))
+    conf_scale = float(infer_cfg.get("conf_scale", 1.0))
     conf_dec = int(infer_cfg.get("conf_decimals", 2))
     box_dec = int(infer_cfg.get("box_decimals", 6))
     raw_cc = infer_cfg.get("class_conf", {}) or {}
@@ -108,7 +112,8 @@ def write_submission(preds: Dict[str, np.ndarray], out_csv: str,
                 n_boxes += len(pred_str.split()) // 6
             else:
                 n_empty += 1
-            writer.writerow([to_txt_id(stem), pred_str])
+            # image_id is the BARE STEM (no extension) -- this is what the grader matches on.
+            writer.writerow([stem, pred_str])
 
     summary = {"rows": len(ids), "with_detections": n_with,
                "empty": n_empty, "total_boxes": n_boxes, "path": str(out)}

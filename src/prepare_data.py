@@ -91,7 +91,11 @@ def prepare(
 
     # ---- 3: folds -> image-list files (absolute paths) ----
     fold_map = assign_folds(stems, k=folds)
-    abs_img = lambda s: str((img_dir / f"{s}.jpg").resolve())
+    # IMPORTANT: do NOT .resolve() — that would follow the symlink back into the
+    # (read-only) source images dir, and Ultralytics would then derive the label
+    # path next to the *source* images instead of <out>/labels. Use the writable
+    # <out>/images/ path so images<->labels derivation lands in <out>/labels.
+    abs_img = lambda s: str((img_dir / f"{s}.jpg").absolute())
     for k in range(folds):
         tr = sorted(abs_img(s) for s in stems if fold_map[s] != k)
         va = sorted(abs_img(s) for s in stems if fold_map[s] == k)
