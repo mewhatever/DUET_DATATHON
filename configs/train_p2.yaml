@@ -1,0 +1,56 @@
+# ============================================================================
+# SMALL-OBJECT variant  —  YOLO11-m with a P2 (stride-4) detection head.
+# The single biggest lever for the 74.8% of boxes that are < 1% of image area.
+# Heavier on memory than the baseline -> smaller batch. Read by src/train.py.
+# Everything not overridden here is identical to train_baseline.yaml.
+# ============================================================================
+
+model:
+  arch: yolo11m
+  weights: yolo11m.pt
+  p2: true               # src/model.build_model loads the *-p2 architecture yaml
+                         # and transfers compatible pretrained weights.
+
+train:
+  imgsz: 1280
+  epochs: 120
+  patience: 40
+  batch: 6               # P2 adds a high-res feature map -> lower batch to fit 16 GB
+  workers: 4
+  cache: ram
+  amp: true
+  seed: 42
+  deterministic: true
+  cos_lr: true
+  close_mosaic: 15
+  val: true
+  plots: true
+
+  optimizer: SGD
+  lr0: 0.01
+  lrf: 0.01
+  momentum: 0.937
+  weight_decay: 0.0005
+  warmup_epochs: 3.0
+
+  box: 7.5
+  cls: 0.7
+  dfl: 1.5
+
+  mosaic: 1.0
+  copy_paste: 0.4        # a touch stronger here; P2 + copy-paste both target small objects
+  mixup: 0.1
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+  degrees: 0.0
+  translate: 0.1
+  scale: 0.5
+  shear: 0.0
+  perspective: 0.0
+  flipud: 0.0
+  fliplr: 0.5
+  erasing: 0.4
+
+augment:
+  use_albumentations: false

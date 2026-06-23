@@ -1,0 +1,45 @@
+# ============================================================================
+# Inference + post-processing config.  Read by src/inference.py, src/validate.py,
+# src/ensemble.py and src/submission.py.
+#
+# `class_conf` is overwritten in place by `src/validate.py --tune` once you have a
+# trained model (it grid-searches thresholds on the test-mimicking val split to
+# maximize mAP@0.5). The defaults below are deliberately LOW: mAP integrates the
+# precision-recall curve, so emitting many *ranked* boxes maximizes recall/AP.
+# ============================================================================
+
+# --- raw model inference ---
+imgsz: 1280
+conf: 0.001          # keep very low at inference; filtering happens via class_conf below
+iou: 0.6             # NMS IoU
+max_det: 300         # dense frames have up to 38 objects; headroom for TTA/ensemble
+tta: true            # Ultralytics augmented inference (multi-scale + flips)
+
+# --- submission formatting ---
+conf_scale: 100.0    # sample_submission.csv uses a 0-100 scale -> mirror it. Use 1.0 for 0-1.
+conf_decimals: 2     # decimals for the confidence value (sample shows 2, e.g. 65.38)
+box_decimals: 6      # decimals for the normalized box coordinates
+emit_empty: true     # every test image must appear, empty PredictionString if no detections
+
+# --- per-class confidence thresholds applied when writing the submission ---
+# (lower for rare classes 4,6,7,8,9,11,12). Tuned automatically by validate.py.
+class_conf:
+  0: 0.001
+  1: 0.001
+  2: 0.001
+  3: 0.001
+  4: 0.001
+  5: 0.001
+  6: 0.001
+  7: 0.001
+  8: 0.001
+  9: 0.001
+  10: 0.001
+  11: 0.001
+  12: 0.001
+
+# --- Weighted Box Fusion (used by src/ensemble.py when combining folds/scales/models) ---
+wbf:
+  iou_thr: 0.55
+  skip_box_thr: 0.001
+  conf_type: avg     # avg | max

@@ -1,0 +1,63 @@
+# ============================================================================
+# BASELINE training config  —  YOLO11-m @ 1280, single phase-fold
+# Tuned for Kaggle GPU (T4 x2 / P100, 16 GB).  Read by src/train.py.
+# Sections:
+#   model:    which detector + weights (consumed by src/model.build_model)
+#   train:    Ultralytics model.train(**kwargs) arguments
+#   augment:  extra (non-Ultralytics) augmentation toggles
+# ============================================================================
+
+model:
+  arch: yolo11m          # yolo11{n,s,m,l,x} | yolov8{n,s,m,l,x} | rtdetr-l | rtdetr-x
+  weights: yolo11m.pt    # COCO-pretrained checkpoint (auto-downloaded by Ultralytics)
+  p2: false              # true -> attach stride-4 P2 small-object head (see train_p2.yaml)
+
+train:
+  # --- core ---
+  imgsz: 1280            # native CCTV width; do NOT drop to 640 (tiny objects vanish)
+  epochs: 120
+  patience: 40           # early stopping on val mAP plateau
+  batch: 8               # T4 16GB @1280 for -m; raise to 12-16 on P100 / DDP / smaller model
+  workers: 4
+  cache: ram             # 810 imgs fit in RAM -> faster epochs (set false if OOM)
+  amp: true              # mixed precision
+  seed: 42
+  deterministic: true
+  cos_lr: true
+  close_mosaic: 15       # disable mosaic for the last N epochs -> clean fine-tune
+  val: true
+  plots: true
+
+  # --- optimizer / schedule ---
+  optimizer: SGD         # robust default; AdamW (lr0~0.001) is the alt for RT-DETR
+  lr0: 0.01
+  lrf: 0.01              # final LR = lr0 * lrf (cosine)
+  momentum: 0.937
+  weight_decay: 0.0005
+  warmup_epochs: 3.0
+  warmup_momentum: 0.8
+  warmup_bias_lr: 0.1
+
+  # --- loss gains (slightly favor classification for the 30x imbalance) ---
+  box: 7.5
+  cls: 0.7               # default 0.5; nudged up for rare classes
+  dfl: 1.5
+
+  # --- AUGMENTATION (each justified in the plan; see configs/README in plan §6) ---
+  mosaic: 1.0            # dense multi-object context + more small objects
+  copy_paste: 0.3        # duplicate rare-class instances (fights imbalance + small obj)
+  mixup: 0.1             # regularize the tiny 810-image set
+  hsv_h: 0.015           # color robustness
+  hsv_s: 0.7
+  hsv_v: 0.4             # brightness -> day/dawn/dusk across the 4 cameras
+  degrees: 0.0           # fixed CCTV -> no rotation
+  translate: 0.1
+  scale: 0.5             # multi-scale robustness
+  shear: 0.0
+  perspective: 0.0       # set 0.0005 to experiment with mild viewpoint warp
+  flipud: 0.0            # vehicles are never upside-down
+  fliplr: 0.5            # traffic is left/right symmetric
+  erasing: 0.4           # simulate heavy occlusion
+
+augment:
+  use_albumentations: false   # true -> add weather/blur/noise pipeline (src/augmentations.py)

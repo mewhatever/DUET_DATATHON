@@ -1,0 +1,33 @@
+# Weights & large artifacts
+checkpoints/
+*.pt
+*.pth
+*.onnx
+*.engine
+
+# Generated outputs
+outputs/
+runs/
+wandb/
+
+# Generated YOLO working dir (symlinks/labels rebuilt by prepare_data.py)
+data/yolo/
+
+# Prediction caches
+*.pkl
+*.npy
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+
+# OS
+.DS_Store
+
+# Keep the raw competition data and the generated data.yaml under version control-ignore
+# (data/train, data/test are large; uncomment the next line if you do NOT want them tracked)
+# data/
